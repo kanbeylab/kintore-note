@@ -196,6 +196,8 @@ select{height:48px;border-radius:12px;border:1px solid var(--line);background:va
     <div class="panel">
       <h2 id="listTitle">この日の記録</h2>
       <div id="dayList"></div>
+      <button class="next" id="coachCopy" type="button" hidden>ヘルスコーチ用にコピー</button>
+      <textarea id="coachText" rows="6" readonly hidden></textarea>
     </div>
 
     <div class="panel">
@@ -373,6 +375,7 @@ function renderDayList(){
   const box=$("dayList");box.textContent="";
   const items=S.days.get(S.date)||[];
   $("listTitle").textContent=fmtDay(S.date)+"の記録"+(items.length?"　"+items.length+"機種":"");
+  $("coachCopy").hidden=!items.length;$("coachText").hidden=true;
   if(!items.length){box.appendChild(el("div","empty",S.ready?"まだ記録がありません。機種を選んで重さを合わせ、1セット終わるごとにボタンを押してください。":"読み込み中…"));return}
   const best={};sortedDates().filter(d=>d<S.date).forEach(d=>S.days.get(d).forEach(i=>{best[i.ex]=Math.max(best[i.ex]||0,i.w)}));
   items.forEach(it=>{
@@ -387,6 +390,15 @@ function renderDayList(){
     const x=el("button","x","×");x.type="button";x.setAttribute("aria-label",it.ex+"の記録を消す");x.onclick=()=>removeItem(it.ex);
     row.appendChild(x);box.appendChild(row);
   });
+}
+function coachMessage(date){
+  const items=S.days.get(date)||[],d=parse(date),parts=new Set();
+  const lines=items.map(it=>{const m=M[it.ex];if(m&&m.part&&!m.cardio)m.part.replace(/（.*?）/g,"").split("・").forEach(x=>parts.add(x));
+    return "・"+it.ex+(m&&m.part?"（"+m.part+"）":"")+"："+(isCardio(it.ex)?fmtN(it.w)+"分":fmtN(it.w)+"kg × "+TARGET_REPS+"回 × "+it.sets+"セット")});
+  const str=items.filter(i=>!isCardio(i.ex)),sets=str.reduce((a,i)=>a+i.sets,0);
+  return d.getFullYear()+"年"+fmtDay(date)+"の筋トレ記録です。\n"+lines.join("\n")+"\n"
+    +(str.length?"筋トレは"+str.length+"種目・合計"+sets+"セット、セット間の休憩は"+(T.sec===60?"1分":T.sec+"秒")+"でした。":"")
+    +(parts.size?"鍛えた部位："+[...parts].join("、")+"。":"")+"\nこの内容を今日の運動として記録して、次回に向けたアドバイスをください。";
 }
 function readValue(){
   const w=parseFloat(String($("weight").value).replace(",","."));
@@ -557,6 +569,12 @@ $("toastUndo").onclick=()=>{
   S.days.set(undo.date,items);saveDay(undo.date);undo=null;$("toast").hidden=true;renderAll();
 };
 
+$("coachCopy").onclick=()=>{
+  const t=coachMessage(S.date),b=$("coachCopy"),box=$("coachText");
+  const ok=()=>{b.textContent="コピーしました。ヘルスコーチに貼り付けてください";setTimeout(()=>{b.textContent="ヘルスコーチ用にコピー"},3000)};
+  const fb=()=>{box.value=t;box.hidden=false;box.focus();box.select();notice("自動でコピーできませんでした。下の欄の文字を全部選んでコピーしてください。")};
+  try{navigator.clipboard.writeText(t).then(ok,fb)}catch(e){fb()}
+};
 $("bkCopy").onclick=()=>{
   const t=backupText(),box=$("bkText"),done=()=>{try{localStorage.setItem(LS_BK,ymd(new Date()))}catch(e){}renderBackup();$("bkCopy").textContent="コピーしました";setTimeout(()=>{$("bkCopy").textContent="記録をコピーする"},2500)};
   const fallback=()=>{box.value=t;box.focus();box.select();notice("自動でコピーできませんでした。下の欄の文字を全部選んでコピーしてください。")};
