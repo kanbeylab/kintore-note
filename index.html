@@ -3,14 +3,14 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>筋トレノート</title>
+<title>トレーニングnote</title>
 <meta name="robots" content="noindex">
 <meta name="theme-color" content="#C2264F">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
 <link rel="apple-touch-icon" href="icon-180.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-title" content="筋トレノート">
+<meta name="apple-mobile-web-app-title" content="トレーニングnote">
 <style>:root{color-scheme:light}body{margin:0}[hidden]{display:none!important}img{max-width:100%}</style>
 </head>
 <body>
@@ -131,6 +131,18 @@ header{display:flex;align-items:baseline;justify-content:space-between;gap:12px;
 .daycard .ex .num{font-size:20px;white-space:nowrap}
 textarea{width:100%;border-radius:12px;border:1px solid var(--line);background:var(--bg);color:var(--ink);font:inherit;font-size:14px;padding:10px 12px;resize:vertical}
 select{height:48px;border-radius:12px;border:1px solid var(--line);background:var(--surface);padding:0 12px;width:100%}
+.tabs.kind{grid-template-columns:repeat(2,1fr)}
+.pgroup{display:flex;flex-direction:column;gap:8px}
+.pgroup h3{margin:0;font-size:14px;font-weight:700;color:var(--muted)}
+.pchips{display:flex;flex-wrap:wrap;gap:8px}
+.pchip{border:1px solid var(--line);background:var(--surface);border-radius:999px;min-height:44px;padding:6px 14px;font-size:15px;line-height:1.3;max-width:100%;overflow-wrap:anywhere;text-align:left}
+.pchip[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--accent-ink);font-weight:700}
+.addopt{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px}
+.addopt select{grid-column:1/-1}
+.addopt input{height:50px;min-width:0;border-radius:12px;border:1px solid var(--line);background:var(--bg);padding:0 12px;font-size:16px}
+#pilList:not(:empty){border-top:1px solid var(--line);padding-top:12px}
+.pilsum{display:flex;flex-direction:column;gap:6px}
+.pilrow{display:grid;grid-template-columns:6.5em minmax(0,1fr);gap:8px;font-size:15px;align-items:baseline}
 .chart svg{display:block;width:100%;height:auto}
 
 .toast{position:fixed;left:0;right:0;bottom:0;display:flex;justify-content:center;padding:12px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-bottom:calc(16px + env(safe-area-inset-bottom,0px));pointer-events:none}
@@ -140,7 +152,7 @@ select{height:48px;border-radius:12px;border:1px solid var(--line);background:va
 
 <div class="wrap">
   <header>
-    <h1>筋トレノート</h1>
+    <h1>トレーニングnote</h1>
     <span class="muted small" id="saveNote"></span>
   </header>
 
@@ -158,8 +170,29 @@ select{height:48px;border-radius:12px;border:1px solid var(--line);background:va
       <div class="day"><span class="muted small" id="dayLabel"></span><strong id="dayText"></strong></div>
       <button id="nextDay" aria-label="次の日">›</button>
     </div>
+    <div class="tabs kind" role="tablist">
+      <button role="tab" id="kind-gym" aria-selected="true" data-kind="gym">筋トレ</button>
+      <button role="tab" id="kind-pil" aria-selected="false" data-kind="pil">ピラティス</button>
+    </div>
 
-    <div class="panel">
+    <div class="panel" id="pilPanel" hidden>
+      <h2>先生のメニューを貼り付け</h2>
+      <textarea id="pPaste" rows="4" placeholder="先生から届いたメニューをそのまま貼り付けます"></textarea>
+      <button class="primary" id="pApply" type="button">貼り付けた内容を選択に反映</button>
+      <div class="rowhead"><h2>やった種目</h2><span class="muted small" id="pCount"></span></div>
+      <div id="pGroups" class="view"></div>
+      <h2>選択肢を追加</h2>
+      <form class="addopt" id="pAddForm">
+        <select id="pGroup" aria-label="器具"></select>
+        <input id="pName" type="text" maxlength="30" placeholder="種目名" autocomplete="off">
+        <button class="next" type="submit">追加</button>
+      </form>
+      <label class="muted small" for="pNote">メモ（先生のひとこと、体の感じなど）</label>
+      <textarea id="pNote" rows="3"></textarea>
+    </div>
+
+
+    <div class="panel" id="menuPanel">
       <div class="rowhead"><h2>おすすめメニュー</h2><span class="muted small" id="menuTime"></span></div>
       <div class="menu" id="menu"></div>
       <div class="muted small">10回×3セットを6種目。脚・胸・背中・お腹が毎回入り、前回やっていない機種を優先して入れ替えます。</div>
@@ -196,11 +229,12 @@ select{height:48px;border-radius:12px;border:1px solid var(--line);background:va
     <div class="panel">
       <h2 id="listTitle">この日の記録</h2>
       <div id="dayList"></div>
+      <div id="pilList"></div>
       <button class="next" id="coachCopy" type="button" hidden>ヘルスコーチ用にコピー</button>
       <textarea id="coachText" rows="6" readonly hidden></textarea>
     </div>
 
-    <div class="panel">
+    <div class="panel" id="machinesPanel">
       <div class="rowhead"><h2>すべての機種</h2><span class="muted small">番号はフロア図と同じです</span></div>
       <div class="machines" id="machines"></div>
     </div>
@@ -257,7 +291,7 @@ const isCardio=ex=>!!(M[ex]&&M[ex].cardio);
 const fmtItem=it=>isCardio(it.ex)?fmtN(it.w)+"分":fmtN(it.w)+"kg × "+it.sets+"セット";
 const pin=ex=>el("span","pin",M[ex]?M[ex].no:"–");
 
-const S={mode:"loading",ready:false,days:new Map(),date:ymd(new Date()),ex:null,view:"record",progEx:null};
+const S={mode:"loading",ready:false,days:new Map(),pil:new Map(),pilOpts:[],kind:"gym",date:ymd(new Date()),ex:null,view:"record",progEx:null};
 let db=null,daysCol=null,loadTimer=null,undo=null,toastTimer=null;
 const pending={},chain={};
 
@@ -266,8 +300,8 @@ function notice(msg,warn){const n=$("notice");if(!msg){n.hidden=true;return}n.te
 /* ---------- storage ---------- */
 const clean=items=>items.map(i=>({ex:String(i.ex),w:Number(i.w)||0,sets:Number(i.sets)||1}));
 function fromOld(sets){const out=[];sets.forEach(s=>{const it=out.find(o=>o.ex===s.ex);if(it){it.sets++;it.w=Math.max(it.w,Number(s.w)||0)}else out.push({ex:String(s.ex),w:Number(s.w)||0,sets:1})});return out}
-function saveLocal(){try{localStorage.setItem(LS,JSON.stringify({days:[...S.days]}))}catch(e){}}
-function loadLocal(){try{const o=JSON.parse(localStorage.getItem(LS)||"null");if(o)S.days=new Map(o.days||[])}catch(e){}}
+function saveLocal(){try{localStorage.setItem(LS,JSON.stringify({days:[...S.days],pil:[...S.pil],pilOpts:S.pilOpts}))}catch(e){}}
+function loadLocal(){try{const o=JSON.parse(localStorage.getItem(LS)||"null");if(o){S.days=new Map(o.days||[]);S.pil=new Map(o.pil||[]);S.pilOpts=Array.isArray(o.pilOpts)?o.pilOpts:[]}}catch(e){}}
 function writeFailed(e){notice(e&&e.code==="quota_exceeded"?"保存できる件数の上限に達しました。古い記録を消すと保存できます。":"保存できませんでした。通信状態を確かめて、もう一度お試しください。",true)}
 function saveDay(date){
   if(S.mode==="local"){saveLocal();return}
@@ -371,7 +405,7 @@ function renderForm(){
   const b=$("addSet");b.disabled=!S.ready||!ex;
   b.textContent=!S.ready?"読み込み中…":!ex?"上の一覧から機種を選んでください":cardio?(it?"時間を更新する":"記録する"):"1セット完了（休憩スタート）";
 }
-function renderDayList(){
+function renderStrengthList(){
   const box=$("dayList");box.textContent="";
   const items=S.days.get(S.date)||[];
   $("listTitle").textContent=fmtDay(S.date)+"の記録"+(items.length?"　"+items.length+"機種":"");
@@ -391,14 +425,107 @@ function renderDayList(){
     row.appendChild(x);box.appendChild(row);
   });
 }
+/* ---------- pilates ---------- */
+/* Teacher's menus first in each group, then common exercise names. */
+const PIL_GROUPS=["リフォーマー","マット","チェア","タワー","バレル","準備・その他"];
+const PIL_PRESET={
+ "リフォーマー":["フットワーク","レッグワーク","アームワーク","ストマックマッサージ","ロールバック&アップ","マーメイド","イヴズランジ","ITBストレッチ","プルストラップ","ハンドレッド","コーディネーション","ショートスパイン","ロングストレッチ","エレファント","ニーストレッチ","ショートボックス","ロングボックス","ローイング","ランニング","ペルビックリフト","サイドスプリット"],
+ "マット":["ASブリッジ","キャットストレッチ","ハンドレッド","ロールアップ","シングルレッグストレッチ","ダブルレッグストレッチ","スパインストレッチ","ソウ","スワン","サイドキック","ショルダーブリッジ","スイミング","プランク"],
+ "チェア":["マーメイド","フットワーク","スワン","プッシュダウン","マウンテンクライマー"],
+ "タワー":["キャットストレッチ","ヒップオープナー","ロールダウン","レッグスプリング","アームスプリング","プッシュスルー"],
+ "バレル":["ロールダウン&アップ","スワン","サイドストレッチ","サイドシットアップ"],
+ "準備・その他":["胸椎ストレッチ","呼吸練習"]};
+const pnorm=s=>s.replace(/[＆&]|and|アンド/gi,"&").replace(/[\s　]/g,"").toLowerCase();
+const pilDay=()=>S.pil.get(S.date)||{items:[],note:""};
+const pilOptions=g=>{const base=PIL_PRESET[g]||[];return base.concat(S.pilOpts.filter(o=>o.a===g&&!base.includes(o.n)).map(o=>o.n))};
+const allDates=()=>[...new Set([...S.days.keys(),...[...S.pil].filter(([d,p])=>p.items.length||p.note).map(([d])=>d)])].sort();
+function pilSet(items,note){
+  if(items.length||note)S.pil.set(S.date,{items:items,note:note});else S.pil.delete(S.date);
+  saveLocal();renderPil();renderDayList();
+}
+function pilToggle(a,n){
+  const d=pilDay(),items=d.items.filter(i=>!(i.a===a&&i.n===n));
+  if(items.length===d.items.length)items.push({a:a,n:n});
+  pilSet(items,d.note);
+}
+function pilGroupOf(s){
+  const t=s.replace(/[\s　]/g,"");
+  if(/キャデラック/.test(t))return "タワー";
+  if(/スパインコレクター/.test(t))return "バレル";
+  return PIL_GROUPS.slice(0,5).find(g=>t.indexOf(g)>=0)||null;
+}
+/* Find or create the option; returns {a,n,isNew}. */
+function pilResolve(group,name){
+  let g=group;
+  if(!g)g=PIL_GROUPS.find(x=>pilOptions(x).some(n=>pnorm(n)===pnorm(name)))||"準備・その他";
+  const hit=pilOptions(g).find(n=>pnorm(n)===pnorm(name));
+  if(hit)return {a:g,n:hit,isNew:false};
+  S.pilOpts.push({a:g,n:name});return {a:g,n:name,isNew:true};
+}
+function pilParse(text){
+  let cur=null;const found=[];let added=0;
+  text.split(/\r?\n/).forEach(raw=>{
+    let line=raw.trim();if(!line)return;
+    if(/^\[?\d{1,2}[:：]\d{2}\]?$/.test(line))return;
+    const h=line.match(/^[（(【＜<]\s*(.+?)\s*[）)】＞>]$/);
+    if(h){cur=pilGroupOf(h[1])||"準備・その他";return}
+    line=line.replace(/^[・･\-*●○◯\s　]+/,"");
+    if(!line||/[！!。]$/.test(line)||/ありがとう|お疲れ|おつかれ|メニュー送|よろしく/.test(line))return;
+    let g=cur;const m=line.match(/^(\S+?)[\s　]+(.+)$/);
+    if(m&&pilGroupOf(m[1])&&m[1].length<=8){g=pilGroupOf(m[1]);line=m[2]}
+    line.split(/[、,，]/).forEach(part=>{
+      const name=part.trim().replace(/\d+$/,"").trim();
+      if(!name||name.length>30)return;
+      const r=pilResolve(g,name);if(r.isNew)added++;
+      if(!found.some(f=>f.a===r.a&&f.n===r.n))found.push({a:r.a,n:r.n});
+    });
+  });
+  return {found:found,added:added};
+}
+function renderKind(){
+  const pil=S.kind==="pil";
+  $("kind-gym").setAttribute("aria-selected",String(!pil));$("kind-pil").setAttribute("aria-selected",String(pil));
+  ["menuPanel","formPanel","machinesPanel"].forEach(id=>{$(id).hidden=pil});$("pilPanel").hidden=!pil;
+}
+function renderPil(){
+  const d=pilDay(),box=$("pGroups");box.textContent="";
+  $("pCount").textContent=d.items.length?d.items.length+"種目を選択中":"タップで選びます";
+  PIL_GROUPS.forEach(g=>{
+    const wrap=el("div","pgroup");wrap.appendChild(el("h3",null,g));const chips=el("div","pchips");
+    pilOptions(g).forEach(n=>{const b=el("button","pchip",n);b.type="button";b.setAttribute("aria-pressed",String(d.items.some(i=>i.a===g&&i.n===n)));b.onclick=()=>pilToggle(g,n);chips.appendChild(b)});
+    wrap.appendChild(chips);box.appendChild(wrap);
+  });
+  const sel=$("pGroup");if(!sel.options.length)PIL_GROUPS.forEach(g=>{const o=el("option",null,g);o.value=g;sel.appendChild(o)});
+  if(document.activeElement!==$("pNote"))$("pNote").value=d.note||"";
+}
+function renderPilList(){
+  const box=$("pilList"),p=S.pil.get(S.date),items=S.days.get(S.date)||[];box.textContent="";
+  if(!p||!(p.items.length||p.note))return;
+  if(!items.length)$("dayList").textContent="";
+  const g=el("div","pilsum");g.appendChild(el("h2",null,"パーソナルピラティス　"+p.items.length+"種目"));
+  PIL_GROUPS.forEach(a=>{const ns=p.items.filter(i=>i.a===a).map(i=>i.n);if(!ns.length)return;
+    const r=el("div","pilrow");r.appendChild(el("span","muted small",a));r.appendChild(el("span",null,ns.join("、")));g.appendChild(r)});
+  if(p.note)g.appendChild(el("div","small muted","メモ："+p.note));
+  box.appendChild(g);$("coachCopy").hidden=false;
+}
+function renderDayList(){renderStrengthList();renderPilList()}
 function coachMessage(date){
-  const items=S.days.get(date)||[],d=parse(date),parts=new Set();
-  const lines=items.map(it=>{const m=M[it.ex];if(m&&m.part&&!m.cardio)m.part.replace(/（.*?）/g,"").split("・").forEach(x=>parts.add(x));
-    return "・"+it.ex+(m&&m.part?"（"+m.part+"）":"")+"："+(isCardio(it.ex)?fmtN(it.w)+"分":fmtN(it.w)+"kg × "+TARGET_REPS+"回 × "+it.sets+"セット")});
-  const str=items.filter(i=>!isCardio(i.ex)),sets=str.reduce((a,i)=>a+i.sets,0);
-  return d.getFullYear()+"年"+fmtDay(date)+"の筋トレ記録です。\n"+lines.join("\n")+"\n"
-    +(str.length?"筋トレは"+str.length+"種目・合計"+sets+"セット、セット間の休憩は"+(T.sec===60?"1分":T.sec+"秒")+"でした。":"")
-    +(parts.size?"鍛えた部位："+[...parts].join("、")+"。":"")+"\nこの内容を今日の運動として記録して、次回に向けたアドバイスをください。";
+  const items=S.days.get(date)||[],p=S.pil.get(date),d=parse(date),parts=new Set();
+  let out=d.getFullYear()+"年"+fmtDay(date)+"のトレーニング記録です。\n";
+  if(items.length){
+    const lines=items.map(it=>{const m=M[it.ex];if(m&&m.part&&!m.cardio)m.part.replace(/（.*?）/g,"").split("・").forEach(x=>parts.add(x));
+      return "・"+it.ex+(m&&m.part?"（"+m.part+"）":"")+"："+(isCardio(it.ex)?fmtN(it.w)+"分":fmtN(it.w)+"kg × "+TARGET_REPS+"回 × "+it.sets+"セット")});
+    const str=items.filter(i=>!isCardio(i.ex)),sets=str.reduce((a,i)=>a+i.sets,0);
+    out+="【筋トレ】\n"+lines.join("\n")+"\n"
+      +(str.length?"筋トレは"+str.length+"種目・合計"+sets+"セット、セット間の休憩は"+(T.sec===60?"1分":T.sec+"秒")+"でした。":"")
+      +(parts.size?"鍛えた部位："+[...parts].join("、")+"。":"")+"\n";
+  }
+  if(p&&(p.items.length||p.note)){
+    out+="【パーソナルピラティス】\n";
+    PIL_GROUPS.forEach(a=>{const ns=p.items.filter(i=>i.a===a).map(i=>i.n);if(ns.length)out+="・"+a+"："+ns.join("、")+"\n"});
+    if(p.note)out+="メモ："+p.note+"\n";
+  }
+  return out+"この内容を今日の運動として記録して、次回に向けたアドバイスをください。";
 }
 function readValue(){
   const w=parseFloat(String($("weight").value).replace(",","."));
@@ -488,10 +615,10 @@ function renderBackup(){
   n.textContent=!S.days.size?"記録はこのスマホの中に保存されています。":at?(days===0?"今日バックアップ済みです。":"前回のバックアップは"+days+"日前（"+fmtShort(at)+"）です。"+(days>=7?"そろそろコピーしておきましょう。":"")):"まだバックアップしていません。記録はこのスマホの中にだけあります。";
   n.style.color=S.days.size&&(!at||days>=7)?"var(--warn)":"var(--muted)";
 }
-function backupText(){return JSON.stringify({app:"kintore-note",exported:ymd(new Date()),days:sortedDates().map(d=>[d,clean(S.days.get(d))])})}
+function backupText(){return JSON.stringify({app:"kintore-note",exported:ymd(new Date()),days:sortedDates().map(d=>[d,clean(S.days.get(d))]),pil:[...S.pil],pilOpts:S.pilOpts})}
 function renderHistory(){
   renderBackup();
-  const dates=sortedDates().reverse(),now=new Date(),month=ymd(now).slice(0,7);
+  const dates=allDates().reverse(),now=new Date(),month=ymd(now).slice(0,7);
   const wk=new Date(now);wk.setDate(now.getDate()-((now.getDay()+6)%7));const wkStart=ymd(wk);
   const stats=$("stats");stats.textContent="";
   [["今週",dates.filter(d=>d>=wkStart).length],["今月",dates.filter(d=>d.startsWith(month)).length],["通算",dates.length]].forEach(([k,n])=>{
@@ -501,8 +628,9 @@ function renderHistory(){
   dates.forEach(d=>{
     const c=el("div","daycard"),head=el("div","rowhead");
     head.appendChild(el("h2",null,(parse(d).getFullYear()!==now.getFullYear()?parse(d).getFullYear()+"年":"")+fmtDay(d)));
-    const open=el("button","link","開く");open.type="button";open.onclick=()=>{S.date=d;S.ex=null;setView("record")};head.appendChild(open);c.appendChild(head);
-    S.days.get(d).forEach(it=>{const r=el("div","ex");r.appendChild(pin(it.ex));r.appendChild(el("span",null,it.ex));r.appendChild(el("span","num",fmtItem(it)));c.appendChild(r)});
+    const open=el("button","link","開く");open.type="button";open.onclick=()=>{S.date=d;S.ex=null;S.kind=S.days.has(d)?"gym":"pil";setView("record")};head.appendChild(open);c.appendChild(head);
+    (S.days.get(d)||[]).forEach(it=>{const r=el("div","ex");r.appendChild(pin(it.ex));r.appendChild(el("span",null,it.ex));r.appendChild(el("span","num",fmtItem(it)));c.appendChild(r)});
+    const pp=S.pil.get(d);if(pp&&pp.items.length){const r=el("div","small");r.appendChild(el("strong",null,"ピラティス　"));r.appendChild(document.createTextNode(pp.items.map(i=>i.n).join("、")));c.appendChild(r)}
     box.appendChild(c);
   });
 }
@@ -545,7 +673,7 @@ function setView(v){
   renderAll();
 }
 function renderAll(){
-  if(S.view==="record"){renderDay();renderMachines();renderForm();renderDayList()}
+  if(S.view==="record"){renderDay();renderKind();renderMachines();renderForm();renderPil();renderDayList()}
   else if(S.view==="history")renderHistory();
   else renderProgress();
 }
@@ -569,6 +697,16 @@ $("toastUndo").onclick=()=>{
   S.days.set(undo.date,items);saveDay(undo.date);undo=null;$("toast").hidden=true;renderAll();
 };
 
+document.querySelectorAll("[data-kind]").forEach(b=>b.onclick=()=>{S.kind=b.dataset.kind;renderKind();renderPil()});
+$("pApply").onclick=()=>{
+  const r=pilParse($("pPaste").value);
+  if(!r.found.length){notice("種目を読み取れませんでした。メニューの部分を貼り付けてください。",true);return}
+  const d=pilDay(),items=d.items.slice();r.found.forEach(f=>{if(!items.some(i=>i.a===f.a&&i.n===f.n))items.push(f)});
+  $("pPaste").value="";pilSet(items,d.note);
+  notice(r.found.length+"種目を選択しました。"+(r.added?"新しい種目を"+r.added+"件、選択肢に追加しました。":""));
+};
+$("pAddForm").addEventListener("submit",e=>{e.preventDefault();const n=$("pName").value.trim();if(!n)return;const r=pilResolve($("pGroup").value,n);$("pName").value="";const d=pilDay();if(!d.items.some(i=>i.a===r.a&&i.n===r.n))pilSet(d.items.concat([{a:r.a,n:r.n}]),d.note);else{saveLocal();renderPil()}});
+$("pNote").addEventListener("change",()=>{const d=pilDay();pilSet(d.items,$("pNote").value.trim())});
 $("coachCopy").onclick=()=>{
   const t=coachMessage(S.date),b=$("coachCopy"),box=$("coachText");
   const ok=()=>{b.textContent="コピーしました。ヘルスコーチに貼り付けてください";setTimeout(()=>{b.textContent="ヘルスコーチ用にコピー"},3000)};
@@ -584,6 +722,8 @@ $("bkLoad").onclick=()=>{
   try{
     const o=JSON.parse($("bkText").value.trim());if(!o||!Array.isArray(o.days))throw 0;
     let n=0;o.days.forEach(([d,items])=>{if(/^\d{4}-\d{2}-\d{2}$/.test(d)&&Array.isArray(items)&&items.length){S.days.set(d,clean(items));n++}});
+    if(Array.isArray(o.pil))o.pil.forEach(([d,v])=>{if(/^\d{4}-\d{2}-\d{2}$/.test(d)&&v&&Array.isArray(v.items))S.pil.set(d,{items:v.items.filter(i=>i&&PIL_GROUPS.includes(i.a)&&i.n).map(i=>({a:i.a,n:String(i.n)})),note:String(v.note||"")})});
+    if(Array.isArray(o.pilOpts))o.pilOpts.forEach(x=>{if(x&&PIL_GROUPS.includes(x.a)&&x.n&&!S.pilOpts.some(q=>q.a===x.a&&q.n===x.n))S.pilOpts.push({a:x.a,n:String(x.n)})});
     saveLocal();$("bkText").value="";notice(n+"日分の記録を読み込みました。");renderAll();
   }catch(e){notice("読み込めませんでした。コピーした内容をそのまま貼り付けてください。",true)}
 };

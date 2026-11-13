@@ -1,6 +1,6 @@
 {
-  "name": "筋トレノート",
-  "short_name": "筋トレノート",
+  "name": "トレーニングnote",
+  "short_name": "トレーニングnote",
   "lang": "ja",
   "start_url": "./",
   "scope": "./",
