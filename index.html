@@ -193,9 +193,9 @@ select{height:48px;border-radius:12px;border:1px solid var(--line);background:va
 
 
     <div class="panel" id="menuPanel">
-      <div class="rowhead"><h2>おすすめメニュー</h2><span class="muted small" id="menuTime"></span></div>
+      <div class="rowhead"><h2>おすすめメニュー<small class="muted" style="font-weight:400">　50代女性向け</small></h2><span class="muted small" id="menuTime"></span></div>
       <div class="menu" id="menu"></div>
-      <div class="muted small">10回×3セットを6種目。脚・胸・背中・お腹が毎回入り、前回やっていない機種を優先して入れ替えます。</div>
+      <div class="muted small">10回×3セットを6種目。脚とお尻から始めて、背中・胸・股関節・お腹の順。週2〜3回、間を1日以上あけるのが目安です。重さは10回目が「ややきつい」くらいに。</div>
     </div>
 
     <div class="panel" id="formPanel">
@@ -275,7 +275,9 @@ const MACHINES=[
  {no:"16",name:"カールベンチ",part:"腕（力こぶ）"},{no:"17",name:"スミスマシン",part:"脚・胸ほか"},{no:"18",name:"パワーラック",part:"全身（上級向け）"}];
 /* Menu: 6 guided machines per visit ≒ 30 min at 10 reps × 3 sets. Each slot rotates to whichever option was done longest ago. */
 const TARGET_SETS=3,TARGET_REPS=10;
-const SLOTS=[["レッグプレス","レッグエクステンション"],["チェストプレス","ペックフライ"],["ラットプルダウン"],["レッグカール","インナー/アウターサイ"],null,["アブドミナル"]];
+/* Order for a woman in her 50s: big lower-body muscles first, then back for posture, chest, the other thigh muscle, hips for balance, core last. */
+const SLOTS=[["レッグプレス"],["ラットプルダウン"],["チェストプレス","ペックフライ"],["レッグカール","レッグエクステンション"],["インナー/アウターサイ"],["アブドミナル"]];
+const WHY={"レッグプレス":"下半身の大きな筋肉。筋肉量を保つ土台","ラットプルダウン":"背中を鍛えて、姿勢を支える","チェストプレス":"押す力を保つ","ペックフライ":"胸を開いて、巻き肩を防ぐ","レッグカール":"ひざを支える","レッグエクステンション":"立つ・階段をのぼる力","インナー/アウターサイ":"股関節を支え、ふらつきを防ぐ","アブドミナル":"体幹を安定させる"};
 const M=Object.fromEntries(MACHINES.map(m=>[m.name,m]));
 const WD=["日","月","火","水","木","金","土"];
 const LS="kintore-note-v2",LS_SEC="kintore-note-rest";
@@ -363,7 +365,7 @@ function renderMenu(){
   menu.forEach(name=>{
     const b=el("button","menurow");b.type="button";b.setAttribute("aria-pressed",String(S.ex===name));
     b.appendChild(pin(name));
-    const n=el("span",null,name);n.appendChild(el("small",null,M[name].part));b.appendChild(n);
+    const n=el("span",null,name);n.appendChild(el("small",null,M[name].part+(WHY[name]?"｜"+WHY[name]:"")));b.appendChild(n);
     const it=todayItem(name),l=lastBefore(name,S.date);
     b.appendChild(it?el("span","st"+(it.sets>=TARGET_SETS?" ok":""),it.sets>=TARGET_SETS?"✓ 完了":it.sets+" / "+TARGET_SETS+"セット"):el("span","st",l?"前回 "+fmtN(l.item.w)+"kg":"はじめて"));
     b.onclick=()=>pickEx(name);box.appendChild(b);
@@ -395,7 +397,7 @@ function renderForm(){
   if(!ex)last.hidden=true;
   else{const l=lastBefore(ex,S.date);last.hidden=false;last.textContent="";
     if(!l)last.textContent="この機種ははじめての記録です。";
-    else{last.appendChild(el("span","muted","前回 "+fmtShort(l.date)+"（"+WD[parse(l.date).getDay()]+"）　"));last.appendChild(el("span","num",fmtItem(l.item)))}}
+    else{last.appendChild(el("span","muted","前回 "+fmtShort(l.date)+"（"+WD[parse(l.date).getDay()]+"）　"));last.appendChild(el("span","num",fmtItem(l.item)));if(!isCardio(ex)&&l.item.sets>=TARGET_SETS&&!todayItem(ex)){const h=el("div","small","前回は3セットできました。10回が楽だったら、1段階だけ重くしてみましょう。");last.appendChild(h)}}}
   $("weightLabel").textContent=cardio?"時間（分）":"重さ（kg）";
   $("setBox").hidden=!!cardio;$("timerBox").hidden=!!cardio;
   $("setNum").textContent=(it?it.sets:0)+" / "+TARGET_SETS;
