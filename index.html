@@ -193,7 +193,7 @@ select{height:48px;border-radius:12px;border:1px solid var(--line);background:va
 
 
     <div class="panel" id="menuPanel">
-      <div class="rowhead"><h2>おすすめメニュー<small class="muted" style="font-weight:400">　50代女性向け</small></h2><span class="muted small" id="menuTime"></span></div>
+      <div class="rowhead"><h2 style="white-space:nowrap">50代女性向けメニュー</h2><span class="muted small" id="menuTime"></span></div>
       <div class="menu" id="menu"></div>
       <div class="muted small">10回×3セットを6種目。脚とお尻から始めて、背中・胸・股関節・お腹の順。週2〜3回、間を1日以上あけるのが目安です。重さは10回目が「ややきつい」くらいに。</div>
     </div>
@@ -361,7 +361,7 @@ function buildMenu(){
 }
 function renderMenu(){
   const box=$("menu"),menu=buildMenu();box.textContent="";
-  $("menuTime").textContent="約"+Math.round(menu.length*(3+2*T.sec/60))+"分（休憩"+(T.sec===60?"1分":T.sec+"秒")+"）";
+  $("menuTime").textContent="約"+Math.round(menu.length*(3+2*T.sec/60))+"分";
   menu.forEach(name=>{
     const b=el("button","menurow");b.type="button";b.setAttribute("aria-pressed",String(S.ex===name));
     b.appendChild(pin(name));
