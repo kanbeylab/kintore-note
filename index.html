@@ -20,7 +20,7 @@
 :root{
   --bg:#FBF0F3; --surface:#FFFFFF; --sunken:#F6E0E6; --ink:#35131D; --muted:#7A5360; --line:#EBCCD5;
   --accent:#C2264F; --accent-ink:#FFFFFF; --accent-soft:#FBDBE4; --best:#A05E00; --best-soft:#FBEBCB; --warn:#9A3412; --warn-soft:#FDE6D2;
-  --pin:#7D1D3F; --pin-ink:#FFFFFF;
+  --pin:#7D1D3F; --pin-ink:#FFFFFF; --pil:#7446B8;
   --f-body:"Zen Kaku Gothic New","Hiragino Sans","Yu Gothic","Meiryo",system-ui,sans-serif;
   --f-num:"Barlow Condensed","Zen Kaku Gothic New","Hiragino Sans",system-ui,sans-serif;
   --r:14px;
@@ -28,12 +28,12 @@
 @media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
   --bg:#1C1114; --surface:#2A1A1F; --sunken:#38232A; --ink:#F8E9ED; --muted:#CBA5B0; --line:#4D313A;
   --accent:#FF8FAB; --accent-ink:#3D0A1A; --accent-soft:#4A1F2C; --best:#F0B450; --best-soft:#3A2D12; --warn:#F6A66B; --warn-soft:#44240F;
-  --pin:#F7A8BD; --pin-ink:#3D0A1A;
+  --pin:#F7A8BD; --pin-ink:#3D0A1A; --pil:#B99CF0;
   color-scheme:dark}}
 :root[data-theme="dark"]{
   --bg:#1C1114; --surface:#2A1A1F; --sunken:#38232A; --ink:#F8E9ED; --muted:#CBA5B0; --line:#4D313A;
   --accent:#FF8FAB; --accent-ink:#3D0A1A; --accent-soft:#4A1F2C; --best:#F0B450; --best-soft:#3A2D12; --warn:#F6A66B; --warn-soft:#44240F;
-  --pin:#F7A8BD; --pin-ink:#3D0A1A;
+  --pin:#F7A8BD; --pin-ink:#3D0A1A; --pil:#B99CF0;
   color-scheme:dark}
 
 *{box-sizing:border-box}
@@ -143,6 +143,20 @@ select{height:48px;border-radius:12px;border:1px solid var(--line);background:va
 #pilList:not(:empty){border-top:1px solid var(--line);padding-top:12px}
 .pilsum{display:flex;flex-direction:column;gap:6px}
 .pilrow{display:grid;grid-template-columns:6.5em minmax(0,1fr);gap:8px;font-size:15px;align-items:baseline}
+.cal{display:grid;grid-template-columns:repeat(7,1fr);gap:4px}
+.cal .wd{text-align:center;font-size:13px;color:var(--muted);padding:2px 0}
+.cal button{aspect-ratio:1/1.05;min-width:0;border:1px solid transparent;border-radius:10px;background:var(--bg);padding:3px 0 0;display:flex;flex-direction:column;align-items:center;gap:3px}
+.cal button .num{font-size:17px;line-height:1.1}
+.cal button.on{background:var(--accent-soft)}
+.cal button.today{border-color:var(--accent)}
+.cal button[aria-pressed="true"]{border-color:var(--ink);box-shadow:inset 0 0 0 1px var(--ink)}
+.cal .dots{display:flex;gap:3px;justify-content:center}
+.cal .dots i,.legend i{width:8px;height:8px;border-radius:50%;display:inline-block}
+.dot-gym{background:var(--accent)}
+.dot-pil{background:var(--pil)}
+.legend{display:flex;flex-wrap:wrap;gap:6px 16px;font-size:14px;color:var(--muted)}
+.legend i{margin-right:6px}
+.caldetail{display:flex;flex-direction:column;gap:6px;border-top:1px solid var(--line);padding-top:12px}
 .chart svg{display:block;width:100%;height:auto}
 
 .toast{position:fixed;left:0;right:0;bottom:0;display:flex;justify-content:center;padding:12px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-bottom:calc(16px + env(safe-area-inset-bottom,0px));pointer-events:none}
@@ -242,6 +256,12 @@ select{height:48px;border-radius:12px;border:1px solid var(--line);background:va
 
   <section class="view" id="view-history" hidden>
     <div class="stats" id="stats"></div>
+    <div class="panel">
+      <div class="rowhead"><button class="link" id="prevMon" type="button">‹ 前の月</button><h2 id="monTitle"></h2><button class="link" id="nextMon" type="button">次の月 ›</button></div>
+      <div class="cal" id="cal"></div>
+      <div class="legend"><span><i class="dot-gym"></i>筋トレ</span><span><i class="dot-pil"></i>ピラティス</span><span id="monCount"></span></div>
+      <div class="caldetail" id="calDetail"></div>
+    </div>
     <div class="view" id="historyList"></div>
     <div class="panel">
       <h2>バックアップ</h2>
@@ -618,8 +638,35 @@ function renderBackup(){
   n.style.color=S.days.size&&(!at||days>=7)?"var(--warn)":"var(--muted)";
 }
 function backupText(){return JSON.stringify({app:"kintore-note",exported:ymd(new Date()),days:sortedDates().map(d=>[d,clean(S.days.get(d))]),pil:[...S.pil],pilOpts:S.pilOpts})}
+const hasGym=d=>S.days.has(d),hasPil=d=>{const p=S.pil.get(d);return !!(p&&(p.items.length||p.note))};
+function renderCal(){
+  const t=ymd(new Date());if(!S.month)S.month=t.slice(0,7);if(!S.sel)S.sel=t;
+  const [y,m]=S.month.split("-").map(Number),first=new Date(y,m-1,1),days=new Date(y,m,0).getDate();
+  $("monTitle").textContent=y+"年"+m+"月";$("nextMon").disabled=S.month>=t.slice(0,7);
+  const cal=$("cal");cal.textContent="";["月","火","水","木","金","土","日"].forEach(w=>cal.appendChild(el("div","wd",w)));
+  for(let i=0;i<(first.getDay()+6)%7;i++)cal.appendChild(el("div"));
+  let count=0;
+  for(let n=1;n<=days;n++){
+    const d=S.month+"-"+String(n).padStart(2,"0"),g=hasGym(d),p=hasPil(d);if(g||p)count++;
+    const b=el("button",((g||p)?"on ":"")+(d===t?"today":""));b.type="button";b.setAttribute("aria-pressed",String(d===S.sel));
+    b.appendChild(el("span","num",String(n)));const dots=el("span","dots");
+    if(g)dots.appendChild(el("i","dot-gym"));if(p)dots.appendChild(el("i","dot-pil"));b.appendChild(dots);
+    b.setAttribute("aria-label",fmtDay(d)+(g?" 筋トレ":"")+(p?" ピラティス":"")+(!g&&!p?" 記録なし":""));
+    b.onclick=()=>{S.sel=d;renderCal()};cal.appendChild(b);
+  }
+  $("monCount").textContent="この月は"+count+"日";
+  const det=$("calDetail");det.textContent="";
+  const head=el("div","rowhead");head.appendChild(el("h2",null,fmtDay(S.sel)));
+  if(S.sel<=t){const o=el("button","link",hasGym(S.sel)||hasPil(S.sel)?"この日を開く":"この日に記録する");o.type="button";o.onclick=()=>{S.date=S.sel;S.ex=null;S.kind=!hasGym(S.sel)&&hasPil(S.sel)?"pil":"gym";setView("record")};head.appendChild(o)}
+  det.appendChild(head);
+  if(!hasGym(S.sel)&&!hasPil(S.sel)){det.appendChild(el("div","muted small","記録はありません。"));return}
+  (S.days.get(S.sel)||[]).forEach(it=>{const r=el("div","ex");r.style.cssText="display:grid;grid-template-columns:28px minmax(0,1fr) auto;gap:8px;align-items:center;font-size:15px";r.appendChild(pin(it.ex));r.appendChild(el("span",null,it.ex));r.appendChild(el("span","num",fmtItem(it)));det.appendChild(r)});
+  const pp=S.pil.get(S.sel);if(pp&&pp.items.length){const r=el("div","small");r.appendChild(el("strong",null,"ピラティス　"));r.appendChild(document.createTextNode(pp.items.map(i=>i.n).join("、")));det.appendChild(r)}
+  if(pp&&pp.note)det.appendChild(el("div","small muted","メモ："+pp.note));
+}
+function monShift(n){const [y,m]=S.month.split("-").map(Number);S.month=ymd(new Date(y,m-1+n,1)).slice(0,7);renderCal()}
 function renderHistory(){
-  renderBackup();
+  renderBackup();renderCal();
   const dates=allDates().reverse(),now=new Date(),month=ymd(now).slice(0,7);
   const wk=new Date(now);wk.setDate(now.getDate()-((now.getDay()+6)%7));const wkStart=ymd(wk);
   const stats=$("stats");stats.textContent="";
@@ -709,6 +756,7 @@ $("pApply").onclick=()=>{
 };
 $("pAddForm").addEventListener("submit",e=>{e.preventDefault();const n=$("pName").value.trim();if(!n)return;const r=pilResolve($("pGroup").value,n);$("pName").value="";const d=pilDay();if(!d.items.some(i=>i.a===r.a&&i.n===r.n))pilSet(d.items.concat([{a:r.a,n:r.n}]),d.note);else{saveLocal();renderPil()}});
 $("pNote").addEventListener("change",()=>{const d=pilDay();pilSet(d.items,$("pNote").value.trim())});
+$("prevMon").onclick=()=>monShift(-1);$("nextMon").onclick=()=>monShift(1);
 $("coachCopy").onclick=()=>{
   const t=coachMessage(S.date),b=$("coachCopy"),box=$("coachText");
   const ok=()=>{b.textContent="コピーしました。ヘルスコーチに貼り付けてください";setTimeout(()=>{b.textContent="ヘルスコーチ用にコピー"},3000)};
